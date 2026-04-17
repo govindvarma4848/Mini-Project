@@ -31,8 +31,14 @@ if __name__ == "__main__":
     # Login programmatically
     login(token=HF_TOKEN, add_to_git_credential=True)
 
-    # Uploading the datasets and model folders
-    upload_folder_to_space("./dataset", "dataset")
+    # 2. Uploading the code and dependencies
+    api = HfApi()
+    api.upload_folder(folder_path="./backend", path_in_repo="backend", repo_id=REPO_ID, repo_type="space")
+    api.upload_file(path_or_fileobj="./Dockerfile", path_in_repo="Dockerfile", repo_id=REPO_ID, repo_type="space")
+    api.upload_file(path_or_fileobj="./requirements.txt", path_in_repo="requirements.txt", repo_id=REPO_ID, repo_type="space")
+
+    # 3. Uploading the datasets and model folders
+    upload_folder_to_space("./datasets", "datasets")
     
     # If your model is in the 'model' folder instead of 'fine_tuned_lora_model', we upload it:
     import os
@@ -41,4 +47,4 @@ if __name__ == "__main__":
     if os.path.exists("./fine_tuned_lora_model"):
         upload_folder_to_space("./fine_tuned_lora_model", "fine_tuned_lora_model")
     
-    print("\nAll done! Your nested folders are now in your Hugging Face Space.")
+    print("\nAll done! Your code, datasets, and models are completely synced.")

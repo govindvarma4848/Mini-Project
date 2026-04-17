@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from rag_pipeline import pipeline  # Import the RAG pipeline function
+from .rag_pipeline import pipeline  # Import the RAG pipeline function
 import uvicorn
 
 # Step 1: Define the FastAPI application
@@ -15,6 +15,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+async def root():
+    return {"status": "Running", "message": "Legal RAG Backend is live! Use /summarize/ for queries."}
 
 # Step 2: Define a Pydantic model for the request body
 class QueryRequest(BaseModel):

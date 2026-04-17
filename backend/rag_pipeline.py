@@ -3,17 +3,18 @@ import json
 import numpy as np
 import faiss
 from sklearn.feature_extraction.text import TfidfVectorizer
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
 
-# Set up directories and file paths
-preprocessed_data_dir = "../dataset/processed-IN-Ext/"
+# Set up directories and file paths based on script location
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+preprocessed_data_dir = os.path.join(BASE_DIR, "datasets", "processed-IN-Ext")
 train_file_A1 = os.path.join(preprocessed_data_dir, "full_summaries_A1.jsonl")
 
 # Load the fine-tuned model and tokenizer
-model_path = "../fine_tuned_lora_model"
+model_path = os.path.join(BASE_DIR, "model")
 tokenizer = AutoTokenizer.from_pretrained(model_path)
-model = AutoModelForCausalLM.from_pretrained(model_path)
+model = AutoModelForSeq2SeqLM.from_pretrained(model_path)
 
 # Move the model to GPU if available
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -72,7 +73,7 @@ def pipeline(query, top_k=3, max_length=4096):
         outputs = model.generate(**inputs, max_new_tokens=1000)
         
         # Decode the generated summary
-        summary = tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1]:], skip_special_tokens=True)
+        summary = tokenizer.decode(outputs[0], skip_special_tokens=True)
         summaries.append(summary)
     
     return summaries

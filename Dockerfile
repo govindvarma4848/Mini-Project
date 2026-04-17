@@ -13,8 +13,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy all the files
 COPY backend/ backend/
-COPY dataset/ dataset/
-COPY fine_tuned_lora_model/ fine_tuned_lora_model/
+COPY datasets/ datasets/
+COPY model/ model/
 
 # Expose port and run the API
 EXPOSE 7860
