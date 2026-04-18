@@ -1,8 +1,14 @@
 from huggingface_hub import HfApi, login
 import sys
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Replace this with your Hugging Face space repo ID (e.g., "username/space-name")
-REPO_ID = "Adapa-Govind-Varma/legal-rag-backend"
+REPO_ID = os.getenv("REPO_ID", "Adapa-Govind-Varma/legal-rag-backend")
+HF_TOKEN = os.getenv("HF_TOKEN")
 
 def upload_folder_to_space(folder_path, path_in_repo):
     api = HfApi()
@@ -21,11 +27,8 @@ def upload_folder_to_space(folder_path, path_in_repo):
 if __name__ == "__main__":
     print("Welcome to the Hugging Face Uploader!")
     
-    # 1. ADD YOUR TOKEN HERE (Get it from huggingface.co -> Settings -> Access Tokens)
-    HF_TOKEN = "paste_your_token_here_starting_with_hf_" 
-    
-    if REPO_ID == "YOUR_USERNAME/YOUR_SPACE_NAME" or HF_TOKEN == "paste_your_token_here_starting_with_hf_":
-        print("ERROR: Please edit this script first, set REPO_ID, and paste your HF_TOKEN.")
+    if not HF_TOKEN or REPO_ID == "YOUR_USERNAME/YOUR_SPACE_NAME":
+        print("ERROR: Please create a .env file with HF_TOKEN and ensure REPO_ID is set correctly.")
         sys.exit(1)
 
     # Login programmatically
@@ -33,15 +36,17 @@ if __name__ == "__main__":
 
     # 2. Uploading the code and dependencies
     api = HfApi()
+    print("Uploading backend...")
     api.upload_folder(folder_path="./backend", path_in_repo="backend", repo_id=REPO_ID, repo_type="space")
+    print("Uploading Dockerfile...")
     api.upload_file(path_or_fileobj="./Dockerfile", path_in_repo="Dockerfile", repo_id=REPO_ID, repo_type="space")
+    print("Uploading requirements.txt...")
     api.upload_file(path_or_fileobj="./requirements.txt", path_in_repo="requirements.txt", repo_id=REPO_ID, repo_type="space")
 
     # 3. Uploading the datasets and model folders
     upload_folder_to_space("./datasets", "datasets")
     
-    # If your model is in the 'model' folder instead of 'fine_tuned_lora_model', we upload it:
-    import os
+    # Check for model folders
     if os.path.exists("./model"):
         upload_folder_to_space("./model", "model")
     if os.path.exists("./fine_tuned_lora_model"):

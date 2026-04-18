@@ -1,87 +1,103 @@
 import os
-import json
 import numpy as np
-import faiss
-from sklearn.feature_extraction.text import TfidfVectorizer
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+import pandas as pd
 import torch
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+from transformers import T5Tokenizer, T5ForConditionalGeneration
 
-# Set up directories and file paths based on script location
+# Set up directories and file paths
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-preprocessed_data_dir = os.path.join(BASE_DIR, "datasets", "processed-IN-Ext")
-train_file_A1 = os.path.join(preprocessed_data_dir, "full_summaries_A1.jsonl")
-
-# Load the fine-tuned model and tokenizer
+dataset_file = os.path.join(BASE_DIR, "datasets", "legal_dataset_small.csv")
 model_path = os.path.join(BASE_DIR, "model")
-tokenizer = AutoTokenizer.from_pretrained(model_path)
-model = AutoModelForSeq2SeqLM.from_pretrained(model_path)
+embeddings_path = os.path.join(BASE_DIR, "datasets", "embeddings.npy")
 
 # Move the model to GPU if available
 device = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"Loading system on: {device}")
+
+# 1. Load the fine-tuned T5 model and tokenizer
+print("🤖 Loading T5 model and tokenizer...")
+tokenizer = T5Tokenizer.from_pretrained(model_path)
+model = T5ForConditionalGeneration.from_pretrained(model_path)
 model.to(device)
-print(f"Model is running on: {model.device}")
 
-# Load and preprocess the dataset
-def load_dataset_for_retrieval(jsonl_file):
-    """
-    Load preprocessed data and extract judgments for retrieval.
-    """
-    with open(jsonl_file, "r", encoding="utf-8") as f:
-        data = [json.loads(line) for line in f]
+# 2. Load the semantic embedder
+print("🔄 Loading semantic embedder (MiniLM)...")
+embedder = SentenceTransformer('all-MiniLM-L6-v2')
 
-    # Extract judgments and deduplicate
-    judgments = list(set(item["judgement"].strip() for item in data))
-    return judgments
+# 3. Load and preprocess the dataset
+def load_dataset_for_retrieval(csv_file):
+    print(f"📂 Loading dataset from {csv_file}...")
+    try:
+        df = pd.read_csv(csv_file)
+        df = df.dropna(subset=['text'])
+        texts = df['text'].astype(str).tolist()
+        print(f"✅ Loaded {len(texts)} legal records.")
+        return df, texts
+    except Exception as e:
+        print(f"❌ Error loading CSV: {e}")
+        return pd.DataFrame(), ["No data available."]
 
-# Load judgments from the file and deduplicate
-all_judgments = load_dataset_for_retrieval(train_file_A1)
+df_data, all_texts = load_dataset_for_retrieval(dataset_file)
 
-# Convert judgments to TF-IDF vectors for retrieval
-vectorizer = TfidfVectorizer()
-judgment_vectors = vectorizer.fit_transform(all_judgments).toarray().astype(np.float32)
-
-# Build FAISS index for efficient similarity search
-index = faiss.IndexFlatL2(judgment_vectors.shape[1])  # L2 distance
-index.add(judgment_vectors)
+# 4. Load or generate embeddings
+if os.path.exists(embeddings_path):
+    print("⚡ Loading saved semantic embeddings...")
+    judgment_embeddings = np.load(embeddings_path)
+    # Validate embedding size
+    if len(judgment_embeddings) != len(all_texts):
+        print("⚠️ Embeddings mismatch! Regenerating...")
+        judgment_embeddings = embedder.encode(all_texts, show_progress_bar=True)
+        np.save(embeddings_path, judgment_embeddings)
+else:
+    print("⏳ Creating semantic embeddings (first time only)...")
+    judgment_embeddings = embedder.encode(all_texts, show_progress_bar=True)
+    np.save(embeddings_path, judgment_embeddings)
+    print("✅ Embeddings saved!")
 
 def retrieve_judgments(query, top_k=3):
     """
-    Retrieve top-k judgments relevant to the query using FAISS.
+    Retrieve top-k judgments relevant to the query using semantic similarity.
     """
-    query_vector = vectorizer.transform([query]).toarray().astype(np.float32)
-    distances, indices = index.search(query_vector, top_k)
-    return [all_judgments[i] for i in indices[0]]
+    query_vec = embedder.encode([query])
+    scores = cosine_similarity(query_vec, judgment_embeddings).flatten()
+    top_indices = scores.argsort()[-top_k:][::-1]
+    return [all_texts[i] for i in top_indices]
 
-# Implement the RAG pipeline
-def pipeline(query, top_k=3, max_length=4096):
+def pipeline(query, top_k=1, max_length=512):
     """
-    RAG pipeline to retrieve judgments and generate summaries using the fine-tuned model.
+    RAG pipeline: retrieve relevant legal texts and generate answers.
     """
-    # Retrieve relevant judgments
-    retrieved_judgments = retrieve_judgments(query, top_k=top_k)
+    retrieved_docs = retrieve_judgments(query, top_k=top_k)
     
     summaries = []
-    for judgment in retrieved_judgments:
-        # Format the input using a prompt template
-        input_text = f"### Instruction: Summarize the following legal text.\n\n### Input:\n{judgment.strip()[:10000]}\n\n### Response:\n".strip()
+    for doc in retrieved_docs:
+        # Prompt style from working local script
+        prompt = f"Explain the legal outcome and punishment: {doc.strip()[:8000]}"
         
-        # Tokenize and move inputs to GPU
-        inputs = tokenizer(input_text, return_tensors="pt", max_length=max_length, truncation=True)
+        inputs = tokenizer(prompt, return_tensors="pt", max_length=1024, truncation=True)
         inputs = {key: value.to(device) for key, value in inputs.items()}
         
-        # Generate summary
-        outputs = model.generate(**inputs, max_new_tokens=1000)
+        # Generation parameters optimized for T5 and legal text
+        outputs = model.generate(
+            **inputs, 
+            max_new_tokens=256, 
+            repetition_penalty=2.5,
+            no_repeat_ngram_size=3,
+            do_sample=True,
+            top_p=0.9,
+            temperature=0.7
+        )
         
-        # Decode the generated summary
         summary = tokenizer.decode(outputs[0], skip_special_tokens=True)
         summaries.append(summary)
     
     return summaries
 
 if __name__ == "__main__":
-    query = "lakshminarayana iyer"
-    summaries = pipeline(query, top_k=1)
-
-    print("Retrieved Summaries:")
-    for i, summary in enumerate(summaries):
-        print(f"Summary {i+1}:\n{summary}\n")
+    test_query = "A person stole a bike and was caught by police."
+    print(f"Testing query: {test_query}")
+    results = pipeline(test_query, top_k=1)
+    for i, s in enumerate(results):
+        print(f"\nResponse {i+1}:\n{s}")

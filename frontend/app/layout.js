@@ -1,8 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'LexSumm | Legal Document Summarizer',
-  description: 'AI-powered legal document summarization and retrieval system.',
+  title: 'AI Driven Legal Support & Justice Access System',
+  description: 'Artificial Intelligence Driven Legal Support and Information System to Enhance Access to Justice for the General Public.',
 };
 
 export default function RootLayout({ children }) {

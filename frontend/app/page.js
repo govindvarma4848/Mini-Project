@@ -44,9 +44,11 @@ export default function Home() {
   return (
     <main className="container">
       <div className="header">
-        <h1 className="title">LexSumm</h1>
+        <h1 className="title" style={{ fontSize: '2.5rem', lineHeight: '1.2' }}>
+          Artificial Intelligence Driven Legal Support and Information System to Enhance Access to Justice for the General Public
+        </h1>
         <p className="subtitle">
-          AI-powered legal document summarization. Enter a query or keywords to retrieve and summarize relevant legal texts instantly.
+          Advanced AI-powered legal document summarization and insights. Enter a query or keywords to retrieve and summarize relevant legal texts instantly.
         </p>
       </div>
 

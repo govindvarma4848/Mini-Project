@@ -8,3 +8,8 @@ uvicorn
 torch
 protobuf
 sentencepiece
+scikit-learn
+tqdm
+huggingface_hub
+
+python-dotenv

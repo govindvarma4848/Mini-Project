@@ -18,7 +18,11 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"status": "Running", "message": "Legal RAG Backend is live! Use /summarize/ for queries."}
+    return {
+        "status": "Running", 
+        "version": "v1.2-dataset-fix",
+        "message": "Legal RAG Backend is live! Use /summarize/ for queries."
+    }
 
 # Step 2: Define a Pydantic model for the request body
 class QueryRequest(BaseModel):
