@@ -1,4 +1,4 @@
-# Legal Document Summarization with Fine-Tuned LLM and RAG Pipeline
+# Legal Document analyze and Summarization with Fine-Tuned LLM and RAG Pipeline
 
 This project focuses on two main objectives:
 1. **Fine-tuning a Large Language Model (LLM)** for summarizing legal documents.
@@ -144,8 +144,7 @@ python src/rag_pipeline.py
 ## Future Work
 
 1. **Increase Token Limit**: The current model supports up to 4096 tokens. Future work can explore extending this limit for longer documents.
-2. **Expand to UK Dataset**: Adapt the model for summarizing UK legal documents, which are typically larger and more complex.
-3. **Optimize Retrieval**: Improve the RAG pipeline for faster and more accurate document retrieval.
+2. **Optimize Retrieval**: Improve the RAG pipeline for faster and more accurate document retrieval.
 
 ---
 
