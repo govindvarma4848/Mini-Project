@@ -1,5 +1,5 @@
 # Legal Document analyze and Summarization with Fine-Tuned LLM and RAG Pipeline
-![Calculator Preview](![Calculator Preview](legal-summarize-insights.png)
+![Preview](![Calculator Preview](legal-summarize-insights.png)
 This project focuses on two main objectives:
 1. **Fine-tuning a Large Language Model (LLM)** for summarizing legal documents.
 2. **Implementing a Retrieval-Augmented Generation (RAG) pipeline** to automatically retrieve and summarize legal documents based on user-provided details.
